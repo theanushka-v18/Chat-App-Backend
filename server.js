@@ -15,10 +15,24 @@ dotenv.config();
 const app = express();
 const server = createServer(app); // ✅ create HTTP server
 
+const allowedOrigins = [
+  "https://theanushka-chat-app.vercel.app",
+  "http://localhost:5173",
+];
+
 // Middlewares
 app.use(
   cors({
-    origin: "https://theanushka-chat-app.vercel.app",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true); // ✅ Allowed
+      } else {
+        callback(new Error("Not allowed by CORS")); // ❌ Blocked
+      }
+    },
     credentials: true,
   })
 );
@@ -32,7 +46,16 @@ app.use("/api", chatRouter);
 // ✅ Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "https://theanushka-chat-app.vercel.app",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true); // ✅ Allowed
+      } else {
+        callback(new Error("Not allowed by CORS")); // ❌ Blocked
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true,
   },
