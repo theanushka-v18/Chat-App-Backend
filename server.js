@@ -18,7 +18,7 @@ const server = createServer(app); // ✅ create HTTP server
 // Middlewares
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://theanushka-chat-app.vercel.app",
     credentials: true,
   })
 );
@@ -32,7 +32,7 @@ app.use("/api", chatRouter);
 // ✅ Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://theanushka-chat-app.vercel.app",
     methods: ["GET", "POST"],
     credentials: true,
   },
