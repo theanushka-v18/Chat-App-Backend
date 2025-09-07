@@ -80,6 +80,7 @@ io.on("connection", (socket) => {
         receiver: new mongoose.Types.ObjectId(data.toUserId),
         message: data.message,
         timestamp: data.timestamp || Date.now(),
+        senderName: data.senderName,
       });
 
       await newMessage.save();

@@ -5,6 +5,7 @@ const messageSchema = new Schema({
   receiver: { type: Schema.Types.ObjectId, ref: "User", required: true },
   message: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
+  senderName: { type: String, required: true },
 });
 
 export const Chat = mongoose.model("Chat", messageSchema);
