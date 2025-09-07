@@ -168,7 +168,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // send email
-    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    const resetUrl = `https://theanushka-chat-app.vercel.app/reset-password/${resetToken}`;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
