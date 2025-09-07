@@ -2,6 +2,8 @@ import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -120,6 +122,88 @@ export const logout = async (req, res) => {
     }
     res.clearCookie("refreshToken");
     res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findOne({ userId });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch)
+      return res.status(400).json({ message: "Current password is incorrect" });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // generate reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpire = resetTokenExpire;
+
+    await user.save();
+
+    // send email
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.USER_EMAIL, pass: process.env.EMAIL_PASS },
+    });
+
+    await transporter.sendMail({
+      to: user.email,
+      subject: "Chat App - Password reset",
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+    });
+
+    res.status(200).json({ message: "Reset link sent to email" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() }, // not expired
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired token" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
