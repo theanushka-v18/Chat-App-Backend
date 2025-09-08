@@ -8,7 +8,9 @@ export const getUsers = async (req, res) => {
     const requiredUsers = allUsers?.filter((user) => {
       return user.name !== name;
     });
-    res.status(200).json(requiredUsers);
+    res
+      .status(200)
+      .json({ message: "Users fetched successfully", users: requiredUsers });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
