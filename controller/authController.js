@@ -146,7 +146,7 @@ export const changePassword = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({ message: "Password updated successfully" });
+    res.status(200).json({ message: "Password updated successfully, login again" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -169,6 +169,7 @@ export const forgotPassword = async (req, res) => {
 
     // send email
     const resetUrl = `https://theanushka-chat-app.vercel.app/reset-password/${resetToken}`;
+    // const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -181,7 +182,7 @@ export const forgotPassword = async (req, res) => {
       html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
     });
 
-    res.status(200).json({ message: "Reset link sent to email" });
+    res.status(200).json({ message: "Reset link has been sent to email" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -203,7 +204,7 @@ export const resetPassword = async (req, res) => {
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful" });
+    res.status(200).json({ message: "Password reset successful, login again" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
