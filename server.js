@@ -93,6 +93,14 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("typing", ({ senderId, receiverId }) => {
+    io.to(receiverId).emit("typing", { senderId });
+  });
+
+  socket.on('stop_typing', ({senderId, receiverId}) => {
+    io.to(receiverId).emit('stop_typing', {senderId})
+  })
+
   socket.on("disconnect", () => {
     console.log("❌ User disconnected:", socket.id);
   });
