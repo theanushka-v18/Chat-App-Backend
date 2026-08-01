@@ -94,6 +94,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", ({ senderId, receiverId }) => {
+    console.log(`✍️ User ${senderId} is typing to ${receiverId}`);
     io.to(receiverId).emit("typing", { senderId });
   });
 
