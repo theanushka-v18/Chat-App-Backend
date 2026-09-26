@@ -171,13 +171,19 @@ export const forgotPassword = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || req.headers.origin || "https://theanushka-chat-app.vercel.app";
     const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
+    console.log("🔑 Email config check:", {
+      hasResendKey: Boolean(process.env.RESEND_API_KEY),
+      resendKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+      hasUserEmail: Boolean(process.env.USER_EMAIL),
+    });
+
     // 1. Try Resend HTTP API (Uses Port 443 HTTPS - Works on Render Free Tier!)
     if (process.env.RESEND_API_KEY) {
       try {
         const resendRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -191,12 +197,14 @@ export const forgotPassword = async (req, res) => {
         const resendData = await resendRes.json();
         if (!resendRes.ok) {
           console.error("❌ Resend API Error:", resendData);
-          return res.status(500).json({ message: resendData.message || "Failed to send email via Resend API" });
+          const errorDetail = resendData.message || resendData.name || JSON.stringify(resendData);
+          return res.status(500).json({ message: `Resend API Error: ${errorDetail}` });
         }
 
         return res.status(200).json({ message: "Reset link has been sent to email" });
       } catch (resendErr) {
         console.error("❌ Resend fetch error:", resendErr);
+        return res.status(500).json({ message: `Resend API Request Failed: ${resendErr.message}` });
       }
     }
 
