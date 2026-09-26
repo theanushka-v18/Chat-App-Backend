@@ -172,12 +172,46 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
     console.log("🔑 Email config check:", {
+      hasBrevoKey: Boolean(process.env.BREVO_API_KEY),
       hasResendKey: Boolean(process.env.RESEND_API_KEY),
-      resendKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
       hasUserEmail: Boolean(process.env.USER_EMAIL),
     });
 
-    // 1. Try Resend HTTP API (Uses Port 443 HTTPS - Works on Render Free Tier!)
+    // 1. Try Brevo HTTP API (Port 443 HTTPS - Sends to ANY email recipient for free WITHOUT needing a custom domain!)
+    if (process.env.BREVO_API_KEY) {
+      try {
+        const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "api-key": process.env.BREVO_API_KEY.trim(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: {
+              name: "Chat App",
+              email: process.env.USER_EMAIL || "anushkaverma19bca033@gmail.com",
+            },
+            to: [{ email: user.email }],
+            subject: "Chat App - Password reset",
+            htmlContent: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 10 minutes.</p>`,
+          }),
+        });
+
+        const brevoData = await brevoRes.json();
+        if (!brevoRes.ok) {
+          console.error("❌ Brevo API Error:", brevoData);
+          const errorDetail = brevoData.message || JSON.stringify(brevoData);
+          return res.status(500).json({ message: `Brevo API Error: ${errorDetail}` });
+        }
+
+        return res.status(200).json({ message: "Reset link has been sent to email" });
+      } catch (brevoErr) {
+        console.error("❌ Brevo fetch error:", brevoErr);
+        return res.status(500).json({ message: `Brevo API Request Failed: ${brevoErr.message}` });
+      }
+    }
+
+    // 2. Try Resend HTTP API (Port 443 HTTPS - Works for owned domains or testing account email)
     if (process.env.RESEND_API_KEY) {
       try {
         const resendRes = await fetch("https://api.resend.com/emails", {
