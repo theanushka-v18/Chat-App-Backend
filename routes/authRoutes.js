@@ -18,4 +18,5 @@ authRouter.post("/refresh", refresh);
 authRouter.post("/logout", logout);
 authRouter.post("/change-password", authMiddleware, changePassword);
 authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password", resetPassword);
 authRouter.post("/reset-password/:token", resetPassword);

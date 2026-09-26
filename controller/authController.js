@@ -97,7 +97,7 @@ export const refresh = async (req, res) => {
     if (!user)
       return res.status(403).json({ message: "Invalid refresh token" });
 
-    jwt.verify(token, REFRESH_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.REFRESH_SECRET, (err, decoded) => {
       if (err)
         return res.status(403).json({ message: "Invalid refresh token" });
 
@@ -132,7 +132,7 @@ export const changePassword = async (req, res) => {
     const userId = req.user.id;
     const { currentPassword, newPassword } = req.body;
 
-    const user = await User.findOne({ userId });
+    const user = await User.findById(userId);
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -167,30 +167,84 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
-    // send email
-    const resetUrl = `https://theanushka-chat-app.vercel.app/reset-password/${resetToken}`;
-    // const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    // Determine client URL dynamically
+    const clientUrl = process.env.CLIENT_URL || req.headers.origin || "https://theanushka-chat-app.vercel.app";
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+    // 1. Try Resend HTTP API (Uses Port 443 HTTPS - Works on Render Free Tier!)
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM || "Chat App <onboarding@resend.dev>",
+            to: [user.email],
+            subject: "Chat App - Password reset",
+            html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 10 minutes.</p>`,
+          }),
+        });
+
+        const resendData = await resendRes.json();
+        if (!resendRes.ok) {
+          console.error("❌ Resend API Error:", resendData);
+          return res.status(500).json({ message: resendData.message || "Failed to send email via Resend API" });
+        }
+
+        return res.status(200).json({ message: "Reset link has been sent to email" });
+      } catch (resendErr) {
+        console.error("❌ Resend fetch error:", resendErr);
+      }
+    }
+
+    // 2. Fallback to Nodemailer SMTP (For localhost or environments allowing SMTP ports)
+    if (!process.env.USER_EMAIL || !process.env.EMAIL_PASS) {
+      console.error("❌ No email provider configured. Please set RESEND_API_KEY or USER_EMAIL/EMAIL_PASS in environment variables.");
+      return res.status(500).json({ message: "Email configuration is missing on server. Set RESEND_API_KEY or USER_EMAIL & EMAIL_PASS." });
+    }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: process.env.USER_EMAIL, pass: process.env.EMAIL_PASS },
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // SSL/TLS
+      auth: {
+        user: process.env.USER_EMAIL,
+        pass: process.env.EMAIL_PASS,
+      },
+      connectionTimeout: 8000, // 8 second timeout for cloud environments blocking SMTP
+      greetingTimeout: 8000,
+      socketTimeout: 8000,
     });
 
     await transporter.sendMail({
+      from: `"Chat App" <${process.env.USER_EMAIL}>`,
       to: user.email,
       subject: "Chat App - Password reset",
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 10 minutes.</p>`,
     });
 
     res.status(200).json({ message: "Reset link has been sent to email" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ Error in forgotPassword:", error);
+    const errorMsg = error.code === "ETIMEDOUT" || error.code === "ECONNREFUSED" || error.message?.includes("greeting") 
+      ? "Email server connection timed out. If hosted on Render Free Tier, outbound SMTP ports (465/587) are blocked. Please add RESEND_API_KEY to server environment variables."
+      : error.message;
+    res.status(500).json({ message: errorMsg });
   }
 };
 
 export const resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const token = req.params.token || req.body.token;
+    const { newPassword } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: "Reset token is required" });
+    }
+
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpire: { $gt: Date.now() }, // not expired
