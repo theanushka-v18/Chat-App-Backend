@@ -160,7 +160,7 @@ export const forgotPassword = async (req, res) => {
 
     // generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const resetTokenExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpire = resetTokenExpire;
@@ -280,16 +280,20 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const token = req.params.token || req.body.token;
-    const { newPassword } = req.body;
+    const token = req.body?.token || req.params?.token;
+    const { newPassword } = req.body || {};
 
-    if (!token) {
+    if (!token || typeof token !== "string" || token.startsWith(":")) {
       return res.status(400).json({ message: "Reset token is required" });
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
     const user = await User.findOne({
       resetPasswordToken: token,
-      resetPasswordExpire: { $gt: Date.now() }, // not expired
+      resetPasswordExpire: { $gt: new Date() }, // not expired
     });
 
     if (!user)
@@ -298,6 +302,7 @@ export const resetPassword = async (req, res) => {
     user.password = await bcrypt.hash(newPassword, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
+    user.refreshToken = undefined;
     await user.save();
 
     res.status(200).json({ message: "Password reset successful, login again" });
