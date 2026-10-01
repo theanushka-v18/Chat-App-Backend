@@ -9,16 +9,14 @@ import cors from "cors";
 import { authRouter } from "./routes/authRoutes.js";
 import { chatRouter } from "./routes/chatRoutes.js";
 import { Chat } from "./models/Chat.js";
+import { allowedClientOrigins } from "./config/clients.js";
 
 dotenv.config();
 
 const app = express();
 const server = createServer(app); // ✅ create HTTP server
 
-const allowedOrigins = [
-  "https://theanushka-chat-app.vercel.app",
-  "http://localhost:5173",
-];
+const allowedOrigins = allowedClientOrigins;
 
 // Middlewares
 app.use(

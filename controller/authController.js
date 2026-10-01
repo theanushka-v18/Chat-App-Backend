@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
+import { resolveClientUrl } from "../config/clients.js";
 
 dotenv.config();
 
@@ -168,7 +169,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Determine client URL dynamically
-    const clientUrl = process.env.CLIENT_URL || req.headers.origin || "https://theanushka-chat-app.vercel.app";
+    const clientUrl = resolveClientUrl(req);
     const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
     console.log("🔑 Email config check:", {
