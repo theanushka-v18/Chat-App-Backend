@@ -22,6 +22,10 @@ const userSchema = new Schema({
     type: String,
   },
   resetPasswordExpire: { type: Date },
+  profileImage: {
+    url: { type: String },
+    publicId: { type: String },
+  },
 });
 
 export const User = mongoose.model("User", userSchema);

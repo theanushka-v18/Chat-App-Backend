@@ -10,6 +10,8 @@ import { authRouter } from "./routes/authRoutes.js";
 import { chatRouter } from "./routes/chatRoutes.js";
 import { Chat } from "./models/Chat.js";
 import { allowedClientOrigins } from "./config/clients.js";
+import { userRouter } from "./routes/userRoutes.js";
+import { errorHandler } from "./middlewares/errorMiddleware.js";
 
 dotenv.config();
 
@@ -40,6 +42,10 @@ app.use(cookieParser());
 // Routes
 app.use("/api", authRouter);
 app.use("/api", chatRouter);
+app.use("/api", userRouter);
+
+// Error handler (must be last)
+app.use(errorHandler);
 
 // ✅ Initialize Socket.IO
 const io = new Server(server, {

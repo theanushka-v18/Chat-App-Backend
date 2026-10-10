@@ -45,7 +45,12 @@ export const register = async (req, res) => {
 
     res.json({
       accessToken,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
       message: "User registered sucessfully",
     });
   } catch (error) {
@@ -78,7 +83,12 @@ export const login = async (req, res) => {
 
     res.json({
       accessToken,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
       message: "User logged in successfully",
     });
   } catch (error) {
