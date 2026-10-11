@@ -16,6 +16,19 @@ const generateRefreshToken = (userId) => {
   return jwt.sign({ userId }, process.env.REFRESH_SECRET, { expiresIn: "7d" });
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// Cross-site deployments (e.g. Vercel frontend -> Render backend) require
+// SameSite=None + Secure, otherwise the browser drops the refresh cookie and
+// session restore fails. Locally we stay on Lax over plain HTTP.
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -37,11 +50,7 @@ export const register = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false, // will change it later
-      sameSite: "strict",
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     res.json({
       accessToken,
@@ -75,11 +84,7 @@ export const login = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false, // will change it later
-      sameSite: "strict",
-    });
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     res.json({
       accessToken,
@@ -120,6 +125,27 @@ export const refresh = async (req, res) => {
   }
 };
 
+export const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user?.userId).select(
+      "-password -refreshToken",
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const logout = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
@@ -131,7 +157,12 @@ export const logout = async (req, res) => {
       user.refreshToken = null;
       await user.save();
     }
-    res.clearCookie("refreshToken");
+    res.clearCookie("refreshToken", {
+      httpOnly: refreshCookieOptions.httpOnly,
+      secure: refreshCookieOptions.secure,
+      sameSite: refreshCookieOptions.sameSite,
+      path: refreshCookieOptions.path,
+    });
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

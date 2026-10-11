@@ -2,6 +2,7 @@ import express from "express";
 import {
   changePassword,
   forgotPassword,
+  getMe,
   login,
   logout,
   refresh,
@@ -16,6 +17,7 @@ authRouter.post("/register", register);
 authRouter.post("/login", login);
 authRouter.post("/refresh", refresh);
 authRouter.post("/logout", logout);
+authRouter.get("/me", authMiddleware, getMe);
 authRouter.post("/change-password", authMiddleware, changePassword);
 authRouter.post("/forgot-password", forgotPassword);
 authRouter.post("/reset-password", resetPassword);
