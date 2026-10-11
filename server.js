@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 import { authRouter } from "./routes/authRoutes.js";
 import { chatRouter } from "./routes/chatRoutes.js";
 import { Chat } from "./models/Chat.js";
+import { User } from "./models/User.js";
 import { allowedClientOrigins } from "./config/clients.js";
 import { userRouter } from "./routes/userRoutes.js";
 import { errorHandler } from "./middlewares/errorMiddleware.js";
@@ -170,8 +171,13 @@ io.on("connection", (socket) => {
       userSockets.delete(socket.id);
       if (userSockets.size === 0) {
         onlineUsers.delete(userId);
-        // Emit offline transition when last active connection ends
-        io.emit("presence:offline", { userId });
+        // Record the last time the user was online, then broadcast the
+        // offline transition together with the timestamp.
+        const lastSeen = new Date();
+        User.findByIdAndUpdate(userId, { lastSeen }).catch((err) =>
+          console.error("Failed to update lastSeen:", err.message),
+        );
+        io.emit("presence:offline", { userId, lastSeen: lastSeen.toISOString() });
       }
       // If still has other connections, do not emit offline
     }

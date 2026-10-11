@@ -17,6 +17,7 @@ export const getUsers = async (req, res) => {
           name: user.name,
           email: user.email,
           profileImage: user.profileImage,
+          lastSeen: user.lastSeen,
         })),
       });
   } catch (error) {

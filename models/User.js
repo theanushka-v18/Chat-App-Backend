@@ -26,6 +26,10 @@ const userSchema = new Schema({
     url: { type: String },
     publicId: { type: String },
   },
+  lastSeen: {
+    type: Date,
+    default: null,
+  },
 });
 
 export const User = mongoose.model("User", userSchema);
