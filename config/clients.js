@@ -1,4 +1,4 @@
-export const DEFAULT_CLIENT_URL = "https://theanushka-chat-app.vercel.app";
+export const DEFAULT_CLIENT_URL = "https://orbither.vercel.app";
 
 export const allowedClientOrigins = [
   DEFAULT_CLIENT_URL,
